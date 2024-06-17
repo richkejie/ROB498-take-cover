@@ -77,6 +77,7 @@ class CommNode(Node):
 
         # state
         self.state = State()
+        self.get_logger().info(f"Starting state: {self.state.mode}")
         # mavros clients
         self.arming_client = self.create_client(CommandBool, "mavros/cmd/arming")
         self.set_mode_client = self.create_client(SetMode, "mavros/set_mode")
@@ -111,6 +112,7 @@ class CommNode(Node):
             req.custom_mode = mode
             self.set_mode_client.call_async(req)
             self.get_logger().info(f"Set Mode to {mode}")
+            self.get_logger().info(f"New State: {self.state.mode}")
 
     # --------------------------- callbacks ------------------------------------------------------
     def callback_launch(self, request, response):
@@ -120,23 +122,28 @@ class CommNode(Node):
             response.message = "No initial pose."
             return response
        
-        if self.state.mode != "OFFBOARD":
-            self.set_mode("OFFBOARD")
+        # if self.state.mode != "ALTITUDE":
+        #     self.set_mode("ALTITUDE")
+        self.set_mode("ALTCTL")
+        self.get_logger().info(f"Manual takeoff")
 
-        # arm drone if not armed yet
-        if not self.state.armed:
-            # print("calling cmd_arm_drone")
-            self.get_logger().info(f"Arming Drone")
-            self.cmd_arm_drone(True)
+        # if self.state.mode != "OFFBOARD":
+        #     self.set_mode("OFFBOARD")
 
-        target_z = self.latest_pose.pose.position.z + G_HEIGHT
+        # # arm drone if not armed yet
+        # if not self.state.armed:
+        #     # print("calling cmd_arm_drone")
+        #     self.get_logger().info(f"Arming Drone")
+        #     self.cmd_arm_drone(True)
 
-        self.get_logger().info(f"Launch Requested. Target altitude: {G_HEIGHT}m")
+        # target_z = self.latest_pose.pose.position.z + G_HEIGHT
 
-        # set hover pose to target altitude above initial position
-        if self.waypoint_state == 0:
-            self.update_waypoint_pose(self.waypoint_pose.pose.position.x, self.waypoint_pose.pose.position.y, target_z)     
-            self.waypoint_state = 1 # set to fixed position
+        # self.get_logger().info(f"Launch Requested. Target altitude: {G_HEIGHT}m")
+
+        # # set hover pose to target altitude above initial position
+        # if self.waypoint_state == 0:
+        #     self.update_waypoint_pose(self.waypoint_pose.pose.position.x, self.waypoint_pose.pose.position.y, target_z)     
+        #     self.waypoint_state = 1 # set to fixed position
 
         response.success = True
         response.message = "Drone taking off."
@@ -147,7 +154,12 @@ class CommNode(Node):
         """Handle TEST command: just wait until TA done collecting data..."""
         self.get_logger().info("Test Requested. Starting test sequence.")
 
-        self.update_waypoint_pose(self.latest_pose.pose.position.x, self.latest_pose.pose.position.y, self.latest_pose.pose.position.z) # maintain current position during test
+        if self.state.mode != "OFFBOARD":
+            self.set_mode("OFFBOARD")
+
+        if self.waypoint_state == 0:
+            self.update_waypoint_pose(self.latest_pose.pose.position.x, self.latest_pose.pose.position.y, self.latest_pose.pose.position.z) # maintain current position during test
+            self.waypoint_state = 1
 
         response.success = True
         response.message = "Test has started. Recording data."
@@ -184,18 +196,22 @@ class CommNode(Node):
         # response.message = "Emergency shutdown command sent. Drone should land immediately."
         # return response
 
-        """Handle LAND command: descend back to intial altitude"""
+        """Handle ABORT command"""
         if self.initial_pose is None:
             response.success = False
             response.message = "No initial pose."
             return response
 
-        self.get_logger().info(f"Landing Requested. Returning to z={self.initial_pose.position.z}m")
+        # self.get_logger().info(f"Landing Requested. Returning to z={self.initial_pose.position.z}m")
 
-        self.update_waypoint_pose(self.latest_pose.position.x, self.latest_pose.position.y, self.latest_pose.position.z-G_HEIGHT) # set waypoint to just below initial position to encourage landing
+        # self.update_waypoint_pose(self.latest_pose.position.x, self.latest_pose.position.y, self.latest_pose.position.z-G_HEIGHT) # set waypoint to just below initial position to encourage landing
+
+        self.get_logger().info(f"ABORT! Returning control to manual")
+        self.set_mode("ALTCTL")
 
         response.success = True
-        response.message = "Drone is landing."
+        # response.message = "Drone is landing."
+        response.message = "Emergency shutdown command sent. Drone should land immediately."
         return response
 
 
