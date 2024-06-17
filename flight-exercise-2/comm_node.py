@@ -21,7 +21,7 @@ FREQ_0_5_HZ = 2 # [1/Hz]
 FREQ_10_HZ = 1/10 # [1/Hz]
 LANDING_TOL = 0.1 # [m]
 LANDED_TOL = 0.005 # [m]
-VICON_DRONE_GND_Z = 0 # UPDATE WITH REAL VICON MEASUREMENT
+VICON_DRONE_GND_Z = 0.18 # UPDATE WITH REAL VICON MEASUREMENT
 LOG_LATEST_POSE = True
 
 
@@ -136,7 +136,7 @@ class CommNode(Node):
         target_pose = PoseStamped()
         target_pose.header.stamp = self.get_clock().now().to_msg()
         target_pose.header.frame_id = "map"
-        target_pose.pose.position.x = self.initial_pose.pose.position.x
+jetson@100.66.147.255        target_pose.pose.position.x = self.initial_pose.pose.position.x
         target_pose.pose.position.y = self.initial_pose.pose.position.y
         target_pose.pose.position.z = self.initial_pose.pose.position.z + HOVER_Z - VICON_DRONE_GND_Z # set target to hover at desired height above initial position
 
