@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
-from std_srvs.srv import Empty, Trigger
-from geometry_msgs.msg import PoseStamped, TwistStamped, Quaternion
+from std_srvs.srv import Trigger
+from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Odometry
 
 from rclpy.qos import qos_profile_system_default
@@ -21,8 +21,11 @@ FREQ_0_5_HZ = 2 # [1/Hz]
 FREQ_10_HZ = 1/10 # [1/Hz]
 LANDING_TOL = 0.1 # [m]
 LANDED_TOL = 0.005 # [m]
-VICON_DRONE_GND_Z = 0.18 # UPDATE WITH REAL VICON MEASUREMENT
 LOG_LATEST_POSE = True
+VICON_DRONE_GND_Z = 0.18 # [m] UPDATE WITH REAL VICON MEASUREMENT
+
+LOG_LATEST_POSE = True
+LOG_WAYPOINT = False
 
 
 class CommNode(Node):
@@ -136,7 +139,7 @@ class CommNode(Node):
         target_pose = PoseStamped()
         target_pose.header.stamp = self.get_clock().now().to_msg()
         target_pose.header.frame_id = "map"
-jetson@100.66.147.255        target_pose.pose.position.x = self.initial_pose.pose.position.x
+        target_pose.pose.position.x = self.initial_pose.pose.position.x
         target_pose.pose.position.y = self.initial_pose.pose.position.y
         target_pose.pose.position.z = self.initial_pose.pose.position.z + HOVER_Z - VICON_DRONE_GND_Z # set target to hover at desired height above initial position
 
@@ -161,7 +164,7 @@ jetson@100.66.147.255        target_pose.pose.position.x = self.initial_pose.pos
             self.set_mode("OFFBOARD")
             
         if self.test_state == 0:
-            self.update_waypoint_pose(self.latest_pose)
+            self.waypoint_pose = self.latest_pose
             self.test_state = 1 # set to fixed position (position at the start of test call)
 
         response.success = True
@@ -185,6 +188,7 @@ jetson@100.66.147.255        target_pose.pose.position.x = self.initial_pose.pos
         # self.waypoint_pose = land_pose
         # self.land_requested = True
         
+    
         self.set_mode("AUTO.LAND")
 
         response.success = True
@@ -200,9 +204,10 @@ jetson@100.66.147.255        target_pose.pose.position.x = self.initial_pose.pos
 
         self.get_logger().info(f"ABORT Requested! Returning control to manual")
         self.set_mode("ALTCTL")
+        self.callback_land(request, response)
 
         response.success = True
-        response.message = "Drone is landing."
+        response.message = "Drone aborted."
         return response
 
 
@@ -213,7 +218,7 @@ jetson@100.66.147.255        target_pose.pose.position.x = self.initial_pose.pos
         current_pose.header.frame_id = "map"
         current_pose.pose = msg.pose.pose
         
-        # Rotate pose from camera by 180 degrees in yaw
+        # Rotate pose from camera by 180 degrees in yaw (flip x and y axes)
         current_pose.pose.position.x *= -1
         current_pose.pose.position.y *= -1
 
@@ -259,7 +264,8 @@ jetson@100.66.147.255        target_pose.pose.position.x = self.initial_pose.pos
     def publish_waypoint(self):
         self.waypoint_pose.header.stamp = self.get_clock().now().to_msg()
         self.waypoint_pub.publish(self.waypoint_pose)
-        #self.get_logger().info(f"Published waypoint: x={self.waypoint_pose.pose.position.x}, y={self.waypoint_pose.pose.position.y}, z={self.waypoint_pose.pose.position.z}")
+        if LOG_WAYPOINT:
+            self.get_logger().info(f"Published waypoint: x={self.waypoint_pose.pose.position.x}, y={self.waypoint_pose.pose.position.y}, z={self.waypoint_pose.pose.position.z}")
 
 
     def print_position(self):
