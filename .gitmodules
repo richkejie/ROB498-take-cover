@@ -1,0 +1,3 @@
+[submodule "ROB498-flight"]
+	path = ROB498-flight
+	url = https://github.com/utiasSTARS/ROB498-flight.git
