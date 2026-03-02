@@ -9,16 +9,20 @@ from rclpy.qos import qos_profile_system_default
 from mavros_msgs.msg import State
 from mavros_msgs.srv import CommandBool, SetMode
 
+from tf_transformations import quaternion_multiply, quaternion_from_euler
+
 import numpy as np
+import math
 
 
 G_HEIGHT = 0.4
+FREQ_30_HZ = 1/30
 
 class CommNode(Node):
     def __init__(self):
         super().__init__('rob498_drone_1')
         # Poses
-        self.initial_pose = None
+        self.initial_pose = None # Startup pose (first power on)
         self.initial_pose_cov = None
         self.latest_pose = None
         self.latest_pose_cov = None
@@ -29,13 +33,7 @@ class CommNode(Node):
         # 1 - set to fixed position
         
         self.vicon_enabled = False
-
         self.state = State()
-        # mavros clients
-        self.arming_client = self.create_client(CommandBool, "mavros/cmd/arming")
-        self.set_mode_client = self.create_client(SetMode, "mavros/set_mode")
-
-        self.get_logger().info("CommNode initiailized; initial pose not yet received.")
 
         # Set up publishers
         self.ego_pos_pub = self.create_publisher(
@@ -48,14 +46,14 @@ class CommNode(Node):
             "/mavros/vision_pose/pose_cov",
             qos_profile_system_default
         )
-        self.create_timer(1/30, self.publish_position) # publish vision pose at 30Hz
+        self.create_timer(FREQ_30_HZ, self.publish_position) # publish vision pose at 30Hz
 
         self.waypoint_pub = self.create_publisher(
             PoseStamped, 
             'mavros/setpoint_position/local', 
             qos_profile_system_default
         )
-        self.create_timer(1/30, self.publish_waypoint) # publish waypoint at 30Hz
+        self.create_timer(FREQ_30_HZ, self.publish_waypoint) # publish waypoint at 30Hz
 
         # I believe flight controller compares waypoint to current position
 
@@ -73,11 +71,17 @@ class CommNode(Node):
             qos_profile_system_default
         )
 
+        # Set up mavros clients
+        self.arming_client = self.create_client(CommandBool, "mavros/cmd/arming")
+        self.set_mode_client = self.create_client(SetMode, "mavros/set_mode")
+
         # Create services
         self.srv_launch = self.create_service(Trigger, 'rob498_drone_1/comm/launch', self.callback_launch)
         self.srv_test = self.create_service(Trigger, 'rob498_drone_1/comm/test', self.callback_test)
         self.srv_land = self.create_service(Trigger, 'rob498_drone_1/comm/land', self.callback_land)
         self.srv_abort = self.create_service(Trigger, 'rob498_drone_1/comm/abort', self.callback_abort)
+
+        self.get_logger().info("CommNode initiailized; initial pose not yet received.")
 
 
     # ----------------------------- helper functions -------------------------------------------------
@@ -87,22 +91,26 @@ class CommNode(Node):
         self.waypoint_pose.header.frame_id = "map"
 
     # ---------------------------- commands -------------------------------------------------
-    def cmd_arm_drone(self, arm_status):
+    def arm_drone(self, arm_status):
         if self.arming_client.service_is_ready():
-            print("arming drone")
             req = CommandBool.Request()
             req.value = arm_status
             self.arming_client.call_async(req)
+            print("Drone armed")
         else:
-            print("client service not ready")
+            print("Arming client not ready")
 
     def set_mode(self, mode):
         if self.set_mode_client.service_is_ready():
             req = SetMode.Request()
             req.custom_mode = mode
             self.set_mode_client.call_async(req)
+            print(f"Set mode to {mode}")
+        else:
+            print("Set mode client not ready")
 
-    # --------------------------- callbacks ------------------------------------------------------
+
+    # --------------------------- Service callbacks ------------------------------------------------------
     def callback_launch(self, request, response):
         """Handle LAUNCH command: take off to desired height above initial pose"""
         if self.initial_pose is None:
@@ -115,8 +123,8 @@ class CommNode(Node):
 
         # arm drone if not armed yet
         if not self.state.armed:
-            print("calling cmd_arm_drone")
-            self.cmd_arm_drone(True)
+            print("Arming drone...")
+            self.arm_drone(True)
 
         target_z = self.latest_pose.pose.position.z + G_HEIGHT
 
@@ -200,6 +208,24 @@ class CommNode(Node):
         current_pose_cov.header.frame_id = "map"
         current_pose_cov.pose = msg.pose
 
+        # Rotate pose 90 deg about z axis to align with FC
+        q_orig = [
+            msg.pose.pose.orientation.x,
+            msg.pose.pose.orientation.y,
+            msg.pose.pose.orientation.z,
+            msg.pose.pose.orientation.w
+        ]
+        q_rot = quaternion_from_euler(0, 0, math.pi/2)
+        q_new = quaternion_multiply(q_orig, q_rot)
+
+        current_pose.pose.pose.orientation = Quaternion(
+            x=q_new[0],
+            y=q_new[1],
+            z=q_new[2],
+            w=q_new[3]
+        )
+
+        # Update pose(s)
         if self.initial_pose is None:
             self.initial_pose = current_pose
             self.initial_pose_cov = current_pose_cov
@@ -228,7 +254,7 @@ class CommNode(Node):
         else:
             self.latest_pose.header.stamp = self.get_clock().now().to_msg()
             self.ego_pos_pub.publish(self.latest_pose)
-            self.get_logger().info(f"Published self pose")
+            self.get_logger().info(f"Published latest self pose")
 
             # pos_cov_msg = self.latest_pose_cov
             # pos_cov_msg.header.stamp = self.get_clock().now().to_msg()
