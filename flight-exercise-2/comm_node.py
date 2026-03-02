@@ -189,22 +189,9 @@ class CommNode(Node):
         current_pose.header.frame_id = "map"
         current_pose.pose = msg.pose.pose
 
-        # Rotate pose 90 deg about z axis to align with FC
-        q_orig = [
-            msg.pose.pose.orientation.x,
-            msg.pose.pose.orientation.y,
-            msg.pose.pose.orientation.z,
-            msg.pose.pose.orientation.w
-        ]
-        q_rot = quaternion_from_euler(0, 0, math.pi/2)
-        q_new = quaternion_multiply(q_orig, q_rot)
-
-        current_pose.pose.pose.orientation = Quaternion(
-            x=q_new[0],
-            y=q_new[1],
-            z=q_new[2],
-            w=q_new[3]
-        )
+        temp_y = current_pose.pose.position.y
+        current_pose.pose.position.y = -current_pose.pose.position.x
+        current_pose.pose.position.x = temp_y
 
         # Update pose(s)
         if self.initial_pose is None:
