@@ -222,6 +222,7 @@ class CommNode(Node):
         current_pose.header.frame_id = "map"
         current_pose.pose = msg.pose.pose
         
+        # Rotate pose from camera by 180 degrees in yaw
         current_pose.pose.position.x *= -1
         current_pose.pose.position.y *= -1
 
@@ -237,11 +238,17 @@ class CommNode(Node):
 
     def vicon_callback(self, msg):
         """Update pose from Vicon"""
+        current_pose = PoseStamped()
+        current_pose.header.stamp = self.get_clock().now().to_msg()
+        current_pose.header.frame_id = "map"
+        current_pose.pose = msg.pose
+        
+        # Update pose(s)
         if self.initial_pose is None:
-            self.initial_pose = msg.pose
+            self.initial_pose = current_pose
             self.get_logger().info(f"Vicon - Set initial pose: x={self.initial_pose.pose.position.x}, y={self.initial_pose.pose.position.y}, z={self.initial_pose.pose.position.z}")
         
-        self.latest_pose = msg.pose
+        self.latest_pose = current_pose
         self.get_logger().info(f"Vicon - Latest pose: x={self.latest_pose.pose.position.x}, y={self.latest_pose.pose.position.y}, z={self.latest_pose.pose.position.z}")
 
 
