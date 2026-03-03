@@ -19,6 +19,8 @@ G_HEIGHT = 0.2
 FREQ_30_HZ = 1/30
 FREQ_0_5_HZ = 2
 
+Q_CAM_TO_BODY = quaternion_from_euler(math.pi, 0.0, math.pi)
+
 class CommNode(Node):
     def __init__(self):
         super().__init__('rob498_drone_1')
@@ -211,6 +213,9 @@ class CommNode(Node):
         current_pose.header.stamp = self.get_clock().now().to_msg()
         current_pose.header.frame_id = "map"
         current_pose.pose = msg.pose.pose
+        
+        current_pose.pose.position.x *= -1
+        current_pose.pose.position.y *= -1
 
         # Update pose(s)
         if self.initial_pose is None:
