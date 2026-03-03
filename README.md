@@ -30,6 +30,10 @@ This is the repo for team Take Cover for ROB498
  2. `nmcli device wifi list` to see which networks are available
  3. `sudo nmcli device wifi connect "YOUR_SSID_NAME" password "YOUR_WIFI_PASSWORD"` password not needed if previously connected to network
 
+ ### IPs:
+ 1. UofT: jetson@100.66.147.255
+ 2. TP-Link_ROB498: jetson@10.42.0.121
+
  ### Installing Propellors
 ![QGC Propellor Directions](images/qgc_propellor_orientations.jpg){width=300px}
 ![Propellor Directions](images/propellor_direction.jpg){width=300px}
