@@ -9,11 +9,6 @@ from rclpy.qos import qos_profile_system_default
 from mavros_msgs.msg import State
 from mavros_msgs.srv import CommandBool, SetMode
 
-from tf_transformations import quaternion_multiply, quaternion_from_euler
-
-import numpy as np
-import math
-
 
 HOVER_Z = 0.5 # [m]
 FREQ_30_HZ = 1/30 # [1/Hz]
@@ -40,7 +35,6 @@ class CommNode(Node):
         
         self.use_vicon = False
         self.state = State()
-        # self.land_requested = False
 
         # Set up publishers
         self.ego_pub = self.create_publisher(
@@ -59,8 +53,6 @@ class CommNode(Node):
         self.create_timer(FREQ_30_HZ, self.publish_waypoint) # publish waypoint at 30Hz
         self.create_timer(FREQ_0_5_HZ, self.print_waypoint)
         
-        # self.create_timer(FREQ_10_HZ, self.check_land)
-
         # Set up subscribers
         if self.use_vicon:
             self.vicon_sub = self.create_subscription(
@@ -156,6 +148,7 @@ class CommNode(Node):
 
         return response
 
+
     def callback_test(self, request, response):
         """Handle TEST command: Set waypoint & wait until TA done collecting data..."""
         self.get_logger().info("Test Requested. Starting test sequence.")
@@ -171,24 +164,9 @@ class CommNode(Node):
         response.message = "Test has started. Recording data."
         return response
     
+
     def callback_land(self, request, response):
         """Handle LAND command: descend back to initial altitude"""        
-        # land_pose = PoseStamped()
-        # land_pose.header.stamp = self.get_clock().now().to_msg()
-        # land_pose.header.frame_id = "map"
-        # land_pose.pose.position.x = self.latest_pose.pose.position.x
-        # land_pose.pose.position.y = self.latest_pose.pose.position.y
-        # land_pose.pose.position.z = self.initial_pose.pose.position.z
-        # land_pose.pose.orientation.x = self.latest_pose.pose.orientation.x
-        # land_pose.pose.orientation.y = self.latest_pose.pose.orientation.y
-        # land_pose.pose.orientation.z = self.latest_pose.pose.orientation.z
-        # land_pose.pose.orientation.w = self.latest_pose.pose.orientation.w  
-
-        # self.get_logger().info(f"Land Requested. Target altitude: {land_pose.pose.position.z}m")
-        # self.waypoint_pose = land_pose
-        # self.land_requested = True
-        
-    
         self.set_mode("AUTO.LAND")
 
         response.success = True
@@ -201,9 +179,6 @@ class CommNode(Node):
         Handle ABORT command: descend back to intiial altitude
         CURRENTLY: hands over control to manual mode
         """
-
-        self.get_logger().info(f"ABORT Requested! Returning control to manual")
-        self.set_mode("ALTCTL")
         self.callback_land(request, response)
 
         response.success = True
@@ -258,7 +233,6 @@ class CommNode(Node):
         else:
             self.latest_pose.header.stamp = self.get_clock().now().to_msg()
             self.ego_pub.publish(self.latest_pose)
-            #self.get_logger().info(f"Published latest pose")
 
 
     def publish_waypoint(self):
@@ -274,15 +248,6 @@ class CommNode(Node):
 
     def print_waypoint(self):
         self.get_logger().info(f"Waypoint: x={self.waypoint_pose.pose.position.x}, y={self.waypoint_pose.pose.position.y}, z={self.waypoint_pose.pose.position.z}")
-
-
-    # def check_land(self):
-    #     if self.land_requested:
-    #         if self.latest_pose.pose.position.z <= self.initial_pose.pose.position.z + LANDED_TOL:
-    #             self.get_logger().info("Landed!")
-    #             self.land_requested = False
-    #         elif self.latest_pose.pose.position.z <= self.initial_pose.pose.position.z + LANDING_TOL:
-    #             self.set_mode("AUTO.LAND")
         
 
 def main(args=None):
