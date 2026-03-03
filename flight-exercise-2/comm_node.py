@@ -161,7 +161,8 @@ class CommNode(Node):
             self.set_mode("OFFBOARD")
             
         if self.test_state == 0:
-            self.update_waypoint_pose(self.latest_pose)
+            self.waypoint_pose = self.latest_pose
+            # self.update_waypoint_pose(self.latest_pose)
             self.test_state = 1 # set to fixed position (position at the start of test call)
 
         response.success = True
