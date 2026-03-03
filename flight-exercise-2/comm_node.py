@@ -15,7 +15,7 @@ import numpy as np
 import math
 
 
-G_HEIGHT = 0.2
+G_HEIGHT = 0.5
 FREQ_30_HZ = 1/30
 FREQ_0_5_HZ = 2
 FREQ_10_HZ = 1/10
