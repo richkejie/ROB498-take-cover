@@ -21,6 +21,7 @@ FREQ_30_HZ = 1/30
 FREQ_0_5_HZ = 2
 FREQ_10_HZ = 1/10
 LANDING_TOL = 0.1
+LANDED_TOL = 0.005
 
 Q_CAM_TO_BODY = quaternion_from_euler(math.pi, 0.0, math.pi)
 
@@ -279,8 +280,12 @@ class CommNode(Node):
 
     def check_land(self):
         if self.land_requested:
-            if self.latest_pose.pose.position.z <= self.initial_pose.pose.position.z + LANDING_TOL:
+            if self.latest_pose.pose.position.z <= self.initial_pose.pose.position.z + LANDED_TOL:
+                self.get_logger().info("Landed!")
+                self.land_requested = False
+            elif self.latest_pose.pose.position.z <= self.initial_pose.pose.position.z + LANDING_TOL:
                 self.set_mode("AUTO.LAND")
+        
 
 def main(args=None):
     rclpy.init(args=args)
