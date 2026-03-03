@@ -49,4 +49,3 @@ This is the repo for team Take Cover for ROB498
 5. `ros2 service call /rob498_drone_1/comm/launch std_srvs/srv/Trigger`
 5. `ros2 service call /rob498_drone_1/comm/test std_srvs/srv/Trigger`
 6. `ros2 service call /rob498_drone_1/comm/land std_srvs/srv/Trigger`
->>>>>>> 6f6629b (added jetson ips on uoft and tp link)
