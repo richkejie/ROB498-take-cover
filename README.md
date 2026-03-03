@@ -30,3 +30,23 @@ This is the repo for team Take Cover for ROB498
  2. `nmcli device wifi list` to see which networks are available
  3. `sudo nmcli device wifi connect "YOUR_SSID_NAME" password "YOUR_WIFI_PASSWORD"` password not needed if previously connected to network
 
+ ### IPs:
+ 1. UofT: jetson@100.66.147.255
+ 2. TP-Link_ROB498: jetson@10.42.0.121
+
+ ### Installing Propellors
+![QGC Propellor Directions](images/qgc_propellor_orientations.jpg){width=300px}
+![Propellor Directions](images/propellor_direction.jpg){width=300px}
+
+### Frames
+![Frames](images/frames.png){width=800px}
+
+### Flight Exercise 2
+1. `ros2 launch realsense2_camera rs_launch.py`
+2. `ros2 topic echo /vicon/ROB498_Drone/ROB498_Drone`, validate that x, y, z directions are expected
+3. `ros2 launch mavros.launch.py gcs_url:=udp://@<ip-address-on-local-computer>:14550`
+4. `python3 comm_node.py`
+5. `ros2 service call /rob498_drone_1/comm/launch std_srvs/srv/Trigger`
+5. `ros2 service call /rob498_drone_1/comm/test std_srvs/srv/Trigger`
+6. `ros2 service call /rob498_drone_1/comm/land std_srvs/srv/Trigger`
+>>>>>>> 6f6629b (added jetson ips on uoft and tp link)
