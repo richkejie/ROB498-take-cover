@@ -20,8 +20,23 @@ This is the repo for team Take Cover for ROB498
 
  ### How to Connect to QGC Wirelessly
  1. Must be connected to TP-Link_ROB498 Network
- 2. On Jetsons, run `ros2 launch mavros.launch.py gcs_url:=udp://@<ip-address-on-local-computer>:14550`
- 3. In QGroundControl, Application Settings -> Comm Links -> Add Link
+ 2. On Jetson, run `ros2 launch mavros.launch.py gcs_url:=udp://@<ip-address-on-local-computer>:14550`
+ 3. In QGroundControl, Application Settings -> Comm Links -> Add New Link
 
  ![QGC Wireless Connection Example](images/qgc_wireless_connection_ex.png)
 
+ ### Installing Propellors
+![QGC Propellor Directions](images/qgc_propellor_orientations.jpg){width=300px}
+![Propellor Directions](images/propellor_direction.jpg){width=300px}
+
+### Frames
+![Frames](images/frames.png){width=800px}
+
+### Flight Exercise 2
+1. `ros2 launch realsense2_camera rs_launch.py`
+2. `ros2 topic echo /vicon/ROB498_Drone/ROB498_Drone`, validate that x, y, z directions are expected
+3. `ros2 launch mavros.launch.py gcs_url:=udp://@<ip-address-on-local-computer>:14550`
+4. `python3 comm_node.py`
+5. `ros2 service call /rob498_drone_1/comm/launch std_srvs/srv/Trigger`
+5. `ros2 service call /rob498_drone_1/comm/test std_srvs/srv/Trigger`
+6. `ros2 service call /rob498_drone_1/comm/land std_srvs/srv/Trigger`
