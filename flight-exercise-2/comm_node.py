@@ -15,7 +15,7 @@ import numpy as np
 import math
 
 
-G_HEIGHT = 0.4
+G_HEIGHT = 0.2
 FREQ_30_HZ = 1/30
 FREQ_0_5_HZ = 2
 
@@ -114,20 +114,30 @@ class CommNode(Node):
             response.message = "No initial pose."
             return response
         
-        self.set_mode("ALTCTL")
-        self.get_logger().info("Initiate manual takeoff.")
+        # self.set_mode("ALTCTL")
+        # self.get_logger().info("Initiate manual takeoff.")
        
-        # if self.state.mode != "OFFBOARD":
-        #     self.set_mode("OFFBOARD")
+        if self.state.mode != "OFFBOARD":
+            self.set_mode("OFFBOARD")
 
-        # # arm drone if not armed yet
-        # if not self.state.armed:
-        #     print("Arming drone...")
-        #     self.arm_drone(True)
+        # arm drone if not armed yet
+        if not self.state.armed:
+            print("Arming drone...")
+            self.arm_drone(True)
+            
+        target_pose = PoseStamped()
+        target_pose.header.stamp = self.get_clock().now().to_msg()
+        target_pose.header.frame_id = "map"
+        target_pose.pose.position.x = self.initial_pose.pose.position.x
+        target_pose.pose.position.y = self.initial_pose.pose.position.y
+        target_pose.pose.position.z = self.initial_pose.pose.position.z + G_HEIGHT
+        target_pose.pose.orientation.x = self.initial_pose.pose.orientation.x
+        target_pose.pose.orientation.y = self.initial_pose.pose.orientation.y
+        target_pose.pose.orientation.z = self.initial_pose.pose.orientation.z
+        target_pose.pose.orientation.w = self.initial_pose.pose.orientation.w       
 
-        # target_z = self.latest_pose.pose.position.z + G_HEIGHT
-
-        # self.get_logger().info(f"Launch Requested. Target altitude: {G_HEIGHT}m")
+        self.get_logger().info(f"Launch Requested. Target altitude: {target_pose.pose.position.z}m")
+        self.waypoint_pose = target_pose
 
         response.success = True
         response.message = "Drone taking off."
@@ -156,13 +166,20 @@ class CommNode(Node):
         #     response.message = "No initial pose."
         #     return response
 
-        self.get_logger().info(f"Landing Requested. Returning to z={self.initial_pose.pose.position.z}m")
+        # self.get_logger().info(f"Landing Requested. Returning to z={self.initial_pose.pose.position.z}m")
         
         land_pose = PoseStamped()
         land_pose.header.stamp = self.get_clock().now().to_msg()
         land_pose.header.frame_id = "map"
-        land_pose.pose = self.latest_pose.pose
-        land_pose.pose.position.z = self.initial_pose.pose.position.z - 0.05 # set waypoint to just below initial position to encourage landing
+        # land_pose.pose = self.latest_pose.pose
+        land_pose.pose.position.x = self.latest_pose.pose.position.x
+        land_pose.pose.position.y = self.latest_pose.pose.position.y
+        land_pose.pose.position.z = self.initial_pose.pose.position.z
+        land_pose.pose.orientation.x = self.latest_pose.pose.orientation.x
+        land_pose.pose.orientation.y = self.latest_pose.pose.orientation.y
+        land_pose.pose.orientation.z = self.latest_pose.pose.orientation.z
+        land_pose.pose.orientation.w = self.latest_pose.pose.orientation.w  
+        # land_pose.pose.position.z = self.initial_pose.pose.position.z - 0.05 # set waypoint to just below initial position to encourage landing
 
         self.update_waypoint_pose(land_pose)
 
