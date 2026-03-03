@@ -1,6 +1,6 @@
 import rclpy
 from rclpy.node import Node
-from std_srvs.srv import Empty, Trigger
+from std_srvs.srv import Trigger
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Odometry
 
@@ -16,7 +16,8 @@ FREQ_0_5_HZ = 2 # [1/Hz]
 FREQ_10_HZ = 1/10 # [1/Hz]
 LANDING_TOL = 0.1 # [m]
 LANDED_TOL = 0.005 # [m]
-VICON_DRONE_GND_Z = 0.18 # UPDATE WITH REAL VICON MEASUREMENT
+VICON_DRONE_GND_Z = 0.18 # [m] UPDATE WITH REAL VICON MEASUREMENT
+
 LOG_LATEST_POSE = True
 LOG_WAYPOINT = False
 
@@ -161,6 +162,7 @@ class CommNode(Node):
         response.message = "Test has started. Recording data."
         return response
     
+    
     def callback_land(self, request, response):
         """Handle LAND command: descend back to initial altitude"""
         self.set_mode("AUTO.LAND")
@@ -176,11 +178,12 @@ class CommNode(Node):
         CURRENTLY: hands over control to manual mode
         """
 
-        self.get_logger().info(f"ABORT Requested! Returning control to manual")
-        self.set_mode("ALTCTL")
+        # self.get_logger().info(f"ABORT Requested! Returning control to manual")
+        # self.set_mode("ALTCTL")
+        self.callback_land(request, response)
 
         response.success = True
-        response.message = "Drone is landing."
+        response.message = "Drone aborted."
         return response
 
 
@@ -191,7 +194,7 @@ class CommNode(Node):
         current_pose.header.frame_id = "map"
         current_pose.pose = msg.pose.pose
         
-        # Rotate pose from camera by 180 degrees in yaw
+        # Rotate pose from camera by 180 degrees in yaw (flip x and y axes)
         current_pose.pose.position.x *= -1
         current_pose.pose.position.y *= -1
 
