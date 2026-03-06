@@ -17,12 +17,13 @@ FREQ_0_5_HZ = 2 # [1/Hz]
 FREQ_10_HZ = 1/10 # [1/Hz]
 LANDING_TOL = 0.1 # [m]
 LANDED_TOL = 0.005 # [m]
-LOG_LATEST_POSE = True
 VICON_DRONE_GND_Z = 0.18 # [m] UPDATE WITH REAL VICON MEASUREMENT
 
 LOG_LATEST_POSE = True
 LOG_WAYPOINT = False
 
+WAYPOINTS = None
+WAYPOINTS_RECEIVED = False
 
 class CommNode(Node):
     def __init__(self):
@@ -61,7 +62,7 @@ class CommNode(Node):
         )
         self.sub_waypoints = self.create_subscription(
             PoseArray, 
-            'rob498_drone_00/comm/waypoints', 
+            'rob498_drone_1/comm/waypoints', 
             self.callback_waypoints, 
             qos_profile_system_default
         )
