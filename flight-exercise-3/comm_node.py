@@ -33,7 +33,6 @@ class CommNode(Node):
         self.latest_pose = None
 
         self.waypoint_pose = PoseStamped() # Pose to hold during test
-        self.test_state = 0 # 1 = hold position during test
         
         self.use_vicon = False
         self.state = State()
@@ -88,9 +87,9 @@ class CommNode(Node):
             req = CommandBool.Request()
             req.value = arm_status
             self.arming_client.call_async(req)
-            print("Drone armed")
+            self.get_logger().info("Drone armed")
         else:
-            print("Arming client not ready")
+            self.get_logger().info(f"arming_client not ready; cannot arm drone")
 
 
     def set_mode(self, mode):
@@ -98,9 +97,9 @@ class CommNode(Node):
             req = SetMode.Request()
             req.custom_mode = mode
             self.set_mode_client.call_async(req)
-            print(f"Set mode to {mode}")
+            self.get_logger().info(f"Set mode to {mode}")
         else:
-            print("Set mode client not ready")
+            self.get_logger().info(f"set_mode_client not ready; cannot change mode to {mode}")
 
 
     ############################################################################
@@ -112,17 +111,11 @@ class CommNode(Node):
             response.success = False
             response.message = "No initial pose."
             return response
-        
-        # Optional manual takeoff
-        # self.set_mode("ALTCTL")
-        # self.get_logger().info("Initiate manual takeoff.")
        
         if self.state.mode != "OFFBOARD":
             self.set_mode("OFFBOARD")
 
-        # arm drone if not armed yet
         if not self.state.armed:
-            print("Arming drone...")
             self.arm_drone(True)
             
         target_pose = PoseStamped()
@@ -148,14 +141,17 @@ class CommNode(Node):
 
     def callback_test(self, request, response):
         """Handle TEST command: Set waypoint & wait until TA done collecting data..."""
+        if not WAYPOINTS_RECEIVED:
+            response.success = False
+            response.message = "Waypoints not received."
+            return response
+
         self.get_logger().info("Test Requested. Starting test sequence.")
 
         if self.state.mode != "OFFBOARD":
             self.set_mode("OFFBOARD")
             
-        if self.test_state == 0:
-            self.waypoint_pose = self.latest_pose
-            self.test_state = 1 # set to fixed position (position at the start of test call)
+        self.waypoint_pose = self.latest_pose
 
         response.success = True
         response.message = "Test has started. Recording data."
