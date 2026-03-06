@@ -32,7 +32,7 @@ This is the repo for team Take Cover for ROB498
 
  ### IPs:
  1. UofT: jetson@100.66.147.255
- 2. TP-Link_ROB498: jetson@10.42.0.121
+ 2. TP-Link_ROB498: jetson@10.42.0.101
 
  ### Installing Propellors
 ![QGC Propellor Directions](images/qgc_propellor_orientations.jpg){width=300px}
