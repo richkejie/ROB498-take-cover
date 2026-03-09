@@ -2,13 +2,15 @@ import numpy as np
 import rclpy
 from rclpy.node import Node
 from std_srvs.srv import Trigger
-from geometry_msgs.msg import PoseStamped, PoseArray
+from geometry_msgs.msg import PoseStamped, PoseArray, TransformStamped
 from nav_msgs.msg import Odometry
 
 from rclpy.qos import qos_profile_system_default
 
 from mavros_msgs.msg import State
 from mavros_msgs.srv import CommandBool, SetMode
+
+from calc_vicon_camera_transform import transform_pose
 
 
 HOVER_Z = 0.5 # [m]
@@ -36,6 +38,7 @@ class CommNode(Node):
         self.latest_pose = None
 
         self.waypoint_pose = PoseStamped() # Pose to hold during test
+        self.vicon_to_camera_tf = None
         
         self.use_vicon = False
         self.state = State()
@@ -68,12 +71,18 @@ class CommNode(Node):
             self.mavros_vision_initial_pose_callback,
             qos_profile_system_default
         )
-        # self.sub_waypoints = self.create_subscription(
-        #     PoseArray, 
-        #     'rob498_drone_1/comm/waypoints', 
-        #     self.callback_waypoints, 
-        #     qos_profile_system_default
-        # )
+        self.sub_waypoints = self.create_subscription(
+            PoseArray, 
+            'rob498_drone_1/comm/waypoints', 
+            self.callback_waypoints, 
+            qos_profile_system_default
+        )
+        self.vicon_to_camera_tf = self.create_subscription(
+            TransformStamped, 
+            '/team1_fe3/vicon_to_camera_transform', 
+            self.callback_vicon_to_camera_tf, 
+            qos_profile_system_default
+        )
 
         # Set up mavros clients
         self.arming_client = self.create_client(CommandBool, "mavros/cmd/arming")
@@ -146,16 +155,16 @@ class CommNode(Node):
         response.success = True
         response.message = "Drone taking off."
         
-        global WAYPOINTS, WAYPOINTS_RECEIVED
-        p = np.array([[self.initial_pose.pose.position.x], [self.initial_pose.pose.position.y], [self.initial_pose.pose.position.z]])
-        WAYPOINTS = np.array([
-            [0.3, 0.0, HOVER_Z],
-            [-0.3, 0.0, HOVER_Z],
-            [0.0, -0.3, HOVER_Z]
-        ]).T
-        WAYPOINTS += p
-        WAYPOINTS_RECEIVED = True
-
+        # Testing fsm logic, comment out when using vicon
+        # global WAYPOINTS, WAYPOINTS_RECEIVED
+        # p = np.array([[self.initial_pose.pose.position.x], [self.initial_pose.pose.position.y], [self.initial_pose.pose.position.z]])
+        # WAYPOINTS = np.array([
+        #     [0.3, 0.0, HOVER_Z],
+        #     [-0.3, 0.0, HOVER_Z],
+        #     [0.0, -0.3, HOVER_Z]
+        # ]).T
+        # WAYPOINTS += p
+        # WAYPOINTS_RECEIVED = True
         return response
 
 
@@ -294,6 +303,10 @@ class CommNode(Node):
 
         if self.latest_pose is not None:
             self.waypoint_pose.pose.orientation = self.latest_pose.pose.orientation
+            
+        # Transform waypoint from vicon frame to camera frame
+        if self.vicon_to_camera_tf is not None:
+            self.waypoint_pose = transform_pose(self.waypoint_pose, self.vicon_to_camera_tf)
 
 
     def run_waypoint_fsm(self):
@@ -339,7 +352,29 @@ class CommNode(Node):
                     self.get_logger().info("Waypoint FSM complete: all checkpoints reached.")
         else:
             self.fsm_hold_start_time = None
+            
+    ############################################################################
+    # Vicon to Camera Transform Callback
+    ############################################################################
+    def callback_vicon_to_camera_tf(self, msg):
+        """Update waypoint target by transforming from vicon frame to camera frame."""
+        if msg is None:
+            self.get_logger().info("Received empty transform message.")
+            return
+        
+        # Convert PoseStamped to TransformStamped for transformation function
+        transform = TransformStamped()
+        transform.header = msg.header
+        transform.child_frame_id = msg.child_frame_id
+        transform.transform.translation.x = msg.transform.translation.x
+        transform.transform.translation.y = msg.transform.translation.y
+        transform.transform.translation.z = msg.transform.translation.z
+        transform.transform.rotation.x = msg.transform.rotation.x
+        transform.transform.rotation.y = msg.transform.rotation.y
+        transform.transform.rotation.z = msg.transform.rotation.z
+        transform.transform.rotation.w = msg.transform.rotation.w
 
+        self.vicon_to_camera_tf = transform
 
     ############################################################################
     # Publisher functions
