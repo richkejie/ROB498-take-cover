@@ -201,7 +201,7 @@ class CommNode(Node):
         current_pose = PoseStamped()
         current_pose.header.stamp = self.get_clock().now().to_msg()
         current_pose.header.frame_id = "map"
-        current_pose.pose = msg.pose.pose
+        current_pose.pose = msg.pose
 
         self.latest_pose = current_pose
 
@@ -210,7 +210,7 @@ class CommNode(Node):
         current_pose = PoseStamped()
         current_pose.header.stamp = self.get_clock().now().to_msg()
         current_pose.header.frame_id = "map"
-        current_pose.pose = msg.pose.pose
+        current_pose.pose = msg.pose
 
         if self.initial_pose is None:
             self.initial_pose = current_pose
