@@ -68,12 +68,12 @@ class CommNode(Node):
             self.mavros_vision_initial_pose_callback,
             qos_profile_system_default
         )
-        self.sub_waypoints = self.create_subscription(
-            PoseArray, 
-            'rob498_drone_1/comm/waypoints', 
-            self.callback_waypoints, 
-            qos_profile_system_default
-        )
+        # self.sub_waypoints = self.create_subscription(
+        #     PoseArray, 
+        #     'rob498_drone_1/comm/waypoints', 
+        #     self.callback_waypoints, 
+        #     qos_profile_system_default
+        # )
 
         # Set up mavros clients
         self.arming_client = self.create_client(CommandBool, "mavros/cmd/arming")
@@ -278,7 +278,6 @@ class CommNode(Node):
         for pose in msg.poses:
             pos = np.array([[pose.position.x], [pose.position.y], [pose.position.z]])
             WAYPOINTS = np.hstack((WAYPOINTS, pos))
-
 
     def update_waypoint_target(self, waypoint_index):
         """Set self.waypoint_pose to waypoint at index from WAYPOINTS (shape 3xN)."""
