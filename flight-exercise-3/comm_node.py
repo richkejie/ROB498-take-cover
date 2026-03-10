@@ -30,29 +30,29 @@ WAYPOINTS_RECEIVED = False
 WAYPOINT_REACH_TOL = 0.05  # [m]
 WAYPOINT_HOLD_TIME = 3.0   # [s]
 
+
 class CommNode(Node):
     def __init__(self):
         super().__init__('rob498_drone_1')
         # Poses
         self.initial_pose = None # Startup pose (first power on)
         self.latest_pose = None
+        self.setpoint_pose = PoseStamped() # Current setpoint
 
+        self.use_vicon = False
         self.vicon_initial_pose = None
-
-        self.waypoint_pose = PoseStamped() # Pose to hold during test
         self.vicon_to_camera_tf = None
         
-        self.use_vicon = False
         self.state = State()
 
         # Set up publishers
-        self.waypoint_pub = self.create_publisher(
+        self.setpoint_pub = self.create_publisher(
             PoseStamped, 
             'mavros/setpoint_position/local', 
             qos_profile_system_default
         )
-        self.create_timer(FREQ_30_HZ, self.publish_waypoint) # publish waypoint at 30Hz
-        self.create_timer(FREQ_0_5_HZ, self.print_waypoint)
+        self.create_timer(FREQ_30_HZ, self.publish_setpoint) # publish waypoint at 30Hz
+        self.create_timer(FREQ_0_5_HZ, self.print_setpoint)
         
 
         # FSM for waypoint following
@@ -158,7 +158,7 @@ class CommNode(Node):
         target_pose.pose.orientation.w = self.initial_pose.pose.orientation.w       
 
         self.get_logger().info(f"Launch Requested. Target altitude: {target_pose.pose.position.z}m")
-        self.waypoint_pose = target_pose
+        self.setpoint_pose = target_pose
 
         response.success = True
         response.message = "Drone taking off."
@@ -215,7 +215,7 @@ class CommNode(Node):
 
     def callback_abort(self, request, response):
         """
-        Handle ABORT command: descend back to intiial altitude
+        Handle ABORT command: descend back to initial altitude
         CURRENTLY: hands over control to manual mode
         """
         self.callback_land(request, response)
@@ -275,22 +275,25 @@ class CommNode(Node):
             WAYPOINTS = np.hstack((WAYPOINTS, pos))
 
     def update_waypoint_target(self, waypoint_index):
-        """Set self.waypoint_pose to waypoint at index from WAYPOINTS (shape 3xN)."""
+        """Set self.setpoint_pose to waypoint at index from WAYPOINTS (shape 3xN)."""
         if WAYPOINTS is None:
             return
 
-        self.waypoint_pose.header.stamp = self.get_clock().now().to_msg()
-        self.waypoint_pose.header.frame_id = "map"
-        self.waypoint_pose.pose.position.x = float(WAYPOINTS[0, waypoint_index])
-        self.waypoint_pose.pose.position.y = float(WAYPOINTS[1, waypoint_index])
-        self.waypoint_pose.pose.position.z = float(WAYPOINTS[2, waypoint_index])
+        new_waypoint = PoseStamped()
+        new_waypoint.header.stamp = self.get_clock().now().to_msg()
+        new_waypoint.header.frame_id = "map"
+        new_waypoint.pose.position.x = float(WAYPOINTS[0, waypoint_index])
+        new_waypoint.pose.position.y = float(WAYPOINTS[1, waypoint_index])
+        new_waypoint.pose.position.z = float(WAYPOINTS[2, waypoint_index])
 
         if self.latest_pose is not None:
-            self.waypoint_pose.pose.orientation = self.latest_pose.pose.orientation
-            
+            new_waypoint.pose.orientation = self.latest_pose.pose.orientation
+
         # Transform waypoint from vicon frame to camera frame
         if self.vicon_to_camera_tf is not None:
-            self.waypoint_pose = transform_pose(self.waypoint_pose, self.vicon_to_camera_tf)
+            new_waypoint = transform_pose(new_waypoint, self.vicon_to_camera_tf)
+
+        self.setpoint_pose = new_waypoint
 
 
     def run_waypoint_fsm(self):
@@ -361,18 +364,18 @@ class CommNode(Node):
     ############################################################################
     # Publisher functions
     ############################################################################
-    def publish_waypoint(self):
-        self.waypoint_pose.header.stamp = self.get_clock().now().to_msg()
-        self.waypoint_pub.publish(self.waypoint_pose)
+    def publish_setpoint(self):
+        self.setpoint_pose.header.stamp = self.get_clock().now().to_msg()
+        self.setpoint_pub.publish(self.setpoint_pose)
         if LOG_WAYPOINT:
-            self.get_logger().info(f"Published waypoint: x={self.waypoint_pose.pose.position.x}, y={self.waypoint_pose.pose.position.y}, z={self.waypoint_pose.pose.position.z}")
+            self.get_logger().info(f"Published setpoint: x={self.setpoint_pose.pose.position.x}, y={self.setpoint_pose.pose.position.y}, z={self.setpoint_pose.pose.position.z}")
 
 
     ############################################################################
     # Print Functions
     ############################################################################
-    def print_waypoint(self):
-        self.get_logger().info(f"Waypoint: x={self.waypoint_pose.pose.position.x}, y={self.waypoint_pose.pose.position.y}, z={self.waypoint_pose.pose.position.z}")
+    def print_setpoint(self):
+        self.get_logger().info(f"Current setpoint: x={self.setpoint_pose.pose.position.x}, y={self.setpoint_pose.pose.position.y}, z={self.setpoint_pose.pose.position.z}")
         
 
 def main(args=None):
