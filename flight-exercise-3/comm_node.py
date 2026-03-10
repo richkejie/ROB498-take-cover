@@ -285,14 +285,12 @@ class CommNode(Node):
             WAYPOINTS = np.hstack((WAYPOINTS, pos))
 
     def subtract_offset_to_waypoints(self):
-        if self.use_vicon:
-            return
-
         global WAYPOINTS_RECEIVED, WAYPOINTS
-        if not WAYPOINTS_RECEIVED or WAYPOINTS is None:
-            return
-        
-        if self.vicon_initial_pose is None:
+        if self.use_vicon or \
+            not WAYPOINTS_RECEIVED or \
+            WAYPOINTS is None or \
+            self.vicon_initial_pose is None or \
+            self.subtract_waypoint_offset_done:
             return
         
         # subtract vicon_initial_pose from waypoints
