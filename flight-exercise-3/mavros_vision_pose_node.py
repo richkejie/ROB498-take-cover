@@ -19,6 +19,8 @@ class MavrosVisionPoseNode(Node):
         # Poses
         self.initial_pose = None # Startup pose (first power on)
         self.latest_pose = None
+
+        self.vicon_initial_pose = None
         
         self.use_vicon = False
 
@@ -37,6 +39,13 @@ class MavrosVisionPoseNode(Node):
             qos_profile_system_default
         )
         self.create_timer(FREQ_0_5_HZ, self.publish_initial_position)
+
+        self.vicon_ego_init_pub = self.create_publisher(
+            PoseStamped,
+            "team1_fe3/vision_pose/vicon_initial_pose",
+            qos_profile_system_default
+        )
+        self.create_timer(FREQ_0_5_HZ, self.publish_vicon_initial_position)
         
         # Set up subscribers
         if self.use_vicon:
@@ -53,6 +62,13 @@ class MavrosVisionPoseNode(Node):
                 self.realsense_callback,
                 qos_profile_system_default
             )
+
+        self.vicon_initial_pose_sub = self.create_subscription(
+            PoseStamped,
+            '/vicon/ROB498_Drone/ROB498_Drone', 
+            self.vicon_initial_pose_callback,
+            qos_profile_system_default
+        )
 
         self.get_logger().info("MavrosVisionPoseNode initiailized; initial pose not yet received.")
 
@@ -97,6 +113,18 @@ class MavrosVisionPoseNode(Node):
         if LOG_LATEST_POSE:
             self.get_logger().info(f"Vicon - Latest pose: x={self.latest_pose.pose.position.x}, y={self.latest_pose.pose.position.y}, z={self.latest_pose.pose.position.z}")
 
+    def vicon_initial_pose_callback(self, msg):
+        """Update Vicon initial pose"""
+        current_pose = PoseStamped()
+        current_pose.header.stamp = self.get_clock().now().to_msg()
+        current_pose.header.frame_id = "map"
+        current_pose.pose = msg.pose
+
+        # Update initial vicon pose
+        if self.vicon_initial_pose is None:
+            self.vicon_initial_pose = current_pose
+            self.get_logger().info(f"Vicon - Set initial pose: x={self.initial_pose.pose.position.x}, y={self.initial_pose.pose.position.y}, z={self.initial_pose.pose.position.z}")
+
     ############################################################################
     # Publisher functions
     ############################################################################
@@ -114,6 +142,13 @@ class MavrosVisionPoseNode(Node):
         else:
             self.initial_pose.header.stamp = self.get_clock().now().to_msg()
             self.ego_init_pub.publish(self.initial_pose)
+
+    def publish_vicon_initial_position(self):
+        if self.vicon_initial_pose is None:
+            self.get_logger().info("Initial Vicon pose not registered, nothing to publish")
+        else:
+            self.vicon_initial_pose.header.stamp = self.get_clock().now().to_msg()
+            self.vicon_ego_init_pub.publish(self.vicon_initial_pose)
 
     ############################################################################
     # Print Functions

@@ -37,6 +37,8 @@ class CommNode(Node):
         self.initial_pose = None # Startup pose (first power on)
         self.latest_pose = None
 
+        self.vicon_initial_pose = None
+
         self.waypoint_pose = PoseStamped() # Pose to hold during test
         self.vicon_to_camera_tf = None
         
@@ -70,6 +72,12 @@ class CommNode(Node):
             PoseStamped,
             "/team1_fe3/vision_pose/initial_pose",
             self.mavros_vision_initial_pose_callback,
+            qos_profile_system_default
+        )
+        self.vicon_ego_init_sub = self.create_subscription(
+            PoseStamped,
+            "team1_fe3/vision_pose/vicon_initial_pose",
+            self.vicon_initial_pose_callback,
             qos_profile_system_default
         )
         self.sub_waypoints = self.create_subscription(
@@ -239,6 +247,17 @@ class CommNode(Node):
         if self.initial_pose is None:
             self.initial_pose = current_pose
             self.get_logger().info(f"Set initial pose: x={self.initial_pose.pose.position.x}, y={self.initial_pose.pose.position.y}, z={self.initial_pose.pose.position.z}")
+        
+
+    def vicon_initial_pose_callback(self, msg):
+        current_pose = PoseStamped()
+        current_pose.header.stamp = self.get_clock().now().to_msg()
+        current_pose.header.frame_id = "map"
+        current_pose.pose = msg.pose
+
+        if self.vicon_initial_pose is None:
+            self.vicon_initial_pose = current_pose
+            self.get_logger().info(f"Set Vicon initial pose: x={self.vicon_initial_pose.pose.position.x}, y={self.vicon_initial_pose.pose.position.y}, z={self.vicon_initial_pose.pose.position.z}")
         
 
     ############################################################################
