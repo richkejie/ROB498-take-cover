@@ -2,15 +2,12 @@ import numpy as np
 import rclpy
 from rclpy.node import Node
 from std_srvs.srv import Trigger
-from geometry_msgs.msg import PoseStamped, PoseArray, TransformStamped
-from nav_msgs.msg import Odometry
+from geometry_msgs.msg import PoseStamped, PoseArray
 
 from rclpy.qos import qos_profile_system_default
 
 from mavros_msgs.msg import State
 from mavros_msgs.srv import CommandBool, SetMode
-
-from calc_vicon_camera_transform import transform_pose
 
 
 HOVER_Z = 0.5 # [m]
@@ -36,7 +33,7 @@ class CommNode(Node):
         self.latest_pose = None # Always in Vicon frame
         
         # Init camera to Vicon transform
-        self.cam_to_vicon_tf = None
+        # self.cam_to_vicon_tf = None
         
         self.setpoint_pose = PoseStamped() # Current setpoint
         self.state = State()
@@ -50,7 +47,7 @@ class CommNode(Node):
         # Set up publishers
         self.setpoint_pub = self.create_publisher(
             PoseStamped, 
-            'mavros/setpoint_position/local', 
+            '/mavros/setpoint_position/local', 
             qos_profile_system_default
         )
         self.create_timer(FREQ_30_HZ, self.publish_setpoint) # publish waypoint at 30Hz
@@ -63,30 +60,30 @@ class CommNode(Node):
             self.mavros_vision_pose_callback,
             qos_profile_system_default
         )
-        self.init_cam_pose_sub = self.create_subscription(
-            PoseStamped,
-            "/team1_fe3/vision_pose/initial_cam_pose",
-            self.initial_cam_pose_callback,
-            qos_profile_system_default
-        )
-        self.init_vicon_pose_sub = self.create_subscription(
-            PoseStamped,
-            "/team1_fe3/vision_pose/initial_vicon_pose",
-            self.initial_vicon_pose_callback,
-            qos_profile_system_default
-        )
+        # self.init_cam_pose_sub = self.create_subscription(
+        #     PoseStamped,
+        #     "/team1_fe3/vision_pose/initial_cam_pose",
+        #     self.initial_cam_pose_callback,
+        #     qos_profile_system_default
+        # )
+        # self.init_vicon_pose_sub = self.create_subscription(
+        #     PoseStamped,
+        #     "/team1_fe3/vision_pose/initial_vicon_pose",
+        #     self.initial_vicon_pose_callback,
+        #     qos_profile_system_default
+        # )
         self.waypoints_sub = self.create_subscription(
             PoseArray, 
             '/rob498_drone_1/comm/waypoints', 
             self.waypoints_callback, 
             qos_profile_system_default
         )
-        self.cam_to_vicon_tf_sub = self.create_subscription(
-            TransformStamped, 
-            '/team1_fe3/cam_to_vicon_tf', 
-            self.cam_to_vicon_tf_callback, 
-            qos_profile_system_default
-        )
+        # self.cam_to_vicon_tf_sub = self.create_subscription(
+        #     TransformStamped, 
+        #     '/team1_fe3/cam_to_vicon_tf', 
+        #     self.cam_to_vicon_tf_callback, 
+        #     qos_profile_system_default
+        # )
 
         # Set up mavros clients
         self.arming_client = self.create_client(CommandBool, "mavros/cmd/arming")
@@ -221,6 +218,7 @@ class CommNode(Node):
         response.message = "Drone aborted."
         return response
 
+
     ############################################################################
     # Pose update callbacks (from MavrosVisionPoseNode)
     ############################################################################
@@ -239,26 +237,26 @@ class CommNode(Node):
             self.get_logger().info(f"Latest pose: x={self.latest_pose.pose.position.x}, y={self.latest_pose.pose.position.y}, z={self.latest_pose.pose.position.z}")
 
 
-    def initial_cam_pose_callback(self, msg):
-        current_pose = PoseStamped()
-        current_pose.header.stamp = self.get_clock().now().to_msg()
-        current_pose.header.frame_id = "map"
-        current_pose.pose = msg.pose
+    # def initial_cam_pose_callback(self, msg):
+    #     current_pose = PoseStamped()
+    #     current_pose.header.stamp = self.get_clock().now().to_msg()
+    #     current_pose.header.frame_id = "map"
+    #     current_pose.pose = msg.pose
 
-        if self.initial_cam_pose is None:
-            self.initial_cam_pose = current_pose
-            self.get_logger().info(f"Set initial camera pose: x={self.initial_cam_pose.pose.position.x}, y={self.initial_cam_pose.pose.position.y}, z={self.initial_cam_pose.pose.position.z}")
+    #     if self.initial_cam_pose is None:
+    #         self.initial_cam_pose = current_pose
+    #         self.get_logger().info(f"Set initial camera pose: x={self.initial_cam_pose.pose.position.x}, y={self.initial_cam_pose.pose.position.y}, z={self.initial_cam_pose.pose.position.z}")
         
 
-    def initial_vicon_pose_callback(self, msg):
-        current_pose = PoseStamped()
-        current_pose.header.stamp = self.get_clock().now().to_msg()
-        current_pose.header.frame_id = "map"
-        current_pose.pose = msg.pose
+    # def initial_vicon_pose_callback(self, msg):
+    #     current_pose = PoseStamped()
+    #     current_pose.header.stamp = self.get_clock().now().to_msg()
+    #     current_pose.header.frame_id = "map"
+    #     current_pose.pose = msg.pose
 
-        if self.initial_vicon_pose is None:
-            self.initial_vicon_pose = current_pose
-            self.get_logger().info(f"Set initial Vicon pose: x={self.initial_vicon_pose.pose.position.x}, y={self.initial_vicon_pose.pose.position.y}, z={self.initial_vicon_pose.pose.position.z}")
+    #     if self.initial_vicon_pose is None:
+    #         self.initial_vicon_pose = current_pose
+    #         self.get_logger().info(f"Set initial Vicon pose: x={self.initial_vicon_pose.pose.position.x}, y={self.initial_vicon_pose.pose.position.y}, z={self.initial_vicon_pose.pose.position.z}")
         
 
     ############################################################################

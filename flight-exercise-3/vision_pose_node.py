@@ -21,7 +21,7 @@ LOG_LATEST_POSE = True
 
 class MavrosVisionPoseNode(Node):
     def __init__(self):
-        super().__init__('rob498_drone_1_vicon_camera_transform_node')       
+        super().__init__('rob498_drone_1_vision_pose_node')       
         # Init pose variables
         self.initial_cam_pose = None # Startup pose (in camera frame)
         self.initial_vicon_pose = None # Startup pose (in Vicon frame)
